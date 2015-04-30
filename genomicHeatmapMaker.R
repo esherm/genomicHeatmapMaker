@@ -7,9 +7,9 @@ library(pipeUtils)
 
 referenceGenome <- "hg18"
 heat_map_result_dir <- "./heatmap"
+sampleName <- c("pool1-1", "HIV_CTRL_noLig-1")
 
 # should have at least two samples
-sampleName <- c("pool1-1", "HIV_CTRL_noLig-1")
 stopifnot(length(sampleName) != 1)
 # check that all samples processed with the same reference genome
 stopifnot(unique(getRefGenome(sampleName)$refGenome) == referenceGenome)
@@ -19,23 +19,37 @@ sites_mrcs <- get_integration_sites_with_mrcs(sampleName)
 
 # TODO: populate from local database, at present pulled from UCSC web-site
 refSeq_genes <- getRefSeq_genes(referenceGenome)
+CpG_islands <- getCpG_islands(referenceGenome)
+DNaseI <- getDNaseI(referenceGenome)
 # END annotation loading
 
 sites_mrcs <- getSitesInFeature(
             sites_mrcs, refSeq_genes, "within_refSeq_gene", asBool=TRUE)
 
+sites_mrcs <- getPositionalValuesOfFeature(sites_mrcs, refSeq_genes)
+
 window_size_refSeq <- c("10k"=1e4, "100k"=1e5, "1M"=1e6)
-sites_mrcs <- getFeatureCounts(sites_mrcs, refSeq_genes, "refSeq.density", 
+sites_mrcs <- getFeatureCounts(sites_mrcs, refSeq_genes, "refSeq_counts", 
                           width=window_size_refSeq)
 
-granges_column_names <- c("seqnames", "start", "end", "width", "strand")
-int_site_column_names <- c("siteID", "sampleName", "chr", "strand", "position")
-required_columns <- unique(c(
-    granges_column_names, int_site_column_names, "type"))
+window_size_CpG_counts <- c("2k"=2e3, "10k"=1e4)
+sites_mrcs <- getFeatureCounts(sites_mrcs, CpG_islands, "CpG_counts", 
+                          width=window_size_CpG_counts)
+
+window_size_CpG_density <- c("10k"=1e4, "100k"=1e5, "1M"=1e6)
+sites_mrcs <- getFeatureCounts(sites_mrcs, CpG_islands, "CpG_density", 
+                          width=window_size_CpG_density)
+sites_mrcs <- from_counts_to_density(sites_mrcs, 
+    "CpG_density", window_size_CpG_density)
+
+window_size_DNaseI <- c("1k"=1e3, "10k"=1e4, "100k"=1e5, "1M"=1e6)
+sites_mrcs <- getFeatureCounts(sites_mrcs, DNaseI, "DNaseI_count", 
+                          width=window_size_DNaseI)
+
 
 sites_mrcs <- as.data.frame(sites_mrcs)
-stopifnot(all(required_columns %in% names(sites_mrcs)))
-annotation_columns <- setdiff(names(sites_mrcs), required_columns)
+
+annotation_columns <- get_annotation_columns(sites_mrcs)
 
 rset <- with(sites_mrcs, ROC.setup(
     rep(TRUE, nrow(sites_mrcs)), type, siteID, sampleName))
