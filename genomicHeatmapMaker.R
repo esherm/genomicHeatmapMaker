@@ -1,4 +1,5 @@
 source("intSiteRetriever/intSiteRetriever.R")
+source("GCcontent/GCcontent.R")
 source("utils.R")
 
 library(colorspace)
@@ -21,6 +22,7 @@ sites_mrcs <- get_integration_sites_with_mrcs(sampleName)
 refSeq_genes <- getRefSeq_genes(referenceGenome)
 CpG_islands <- getCpG_islands(referenceGenome)
 DNaseI <- getDNaseI(referenceGenome)
+reference_genome_sequence <- get_reference_genome(referenceGenome)
 # END annotation loading
 
 sites_mrcs <- getSitesInFeature(
@@ -31,6 +33,13 @@ sites_mrcs <- getPositionalValuesOfFeature(sites_mrcs, refSeq_genes)
 window_size_refSeq <- c("10k"=1e4, "100k"=1e5, "1M"=1e6)
 sites_mrcs <- getFeatureCounts(sites_mrcs, refSeq_genes, "refSeq_counts", 
                           width=window_size_refSeq)
+
+window_size_GC <- c("50"=50, "100"=100, "250"=250,
+    "500"=500, "1k"=1000, "2k"=2000, "5k"=5000,
+    "10k"=1e4, "25k"=2.5e4, "50k"=5e4, "100k"=1e5, 
+    "250k"=2.5e5, "500k"=5e5, "1M"=1e6)
+sites_mrcs <- getGCpercentage(
+    sites_mrcs, "GC", window_size_GC, reference_genome_sequence)
 
 window_size_CpG_counts <- c("2k"=2e3, "10k"=1e4)
 sites_mrcs <- getFeatureCounts(sites_mrcs, CpG_islands, "CpG_counts", 
