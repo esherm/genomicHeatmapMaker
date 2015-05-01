@@ -1,5 +1,6 @@
 source("intSiteRetriever/intSiteRetriever.R")
 source("GCcontent/GCcontent.R")
+source("CancerGeneList/onco_genes.R")
 source("utils.R")
 
 library(colorspace)
@@ -22,11 +23,26 @@ sites_mrcs <- get_integration_sites_with_mrcs(sampleName)
 refSeq_genes <- getRefSeq_genes(referenceGenome)
 CpG_islands <- getCpG_islands(referenceGenome)
 DNaseI <- getDNaseI(referenceGenome)
+
 reference_genome_sequence <- get_reference_genome(referenceGenome)
+
+oncogene_file <- "CancerGeneList/allonco_no_pipes.csv"
+oncogenes <- get_oncogene_from_file(oncogene_file)
 # END annotation loading
 
 sites_mrcs <- getSitesInFeature(
             sites_mrcs, refSeq_genes, "within_refSeq_gene", asBool=TRUE)
+
+# is there oncogene closer than 50k
+refSeq_gene_symbols <- refSeq_genes$name2
+is_refSeq_oncogene <- is_onco_gene(refSeq_gene_symbols, oncogenes)
+refSeq_oncogene <- refSeq_genes[is_refSeq_oncogene]
+sites_mrcs <- getNearestFeature(
+    sites_mrcs, refSeq_oncogene, dists.only=TRUE, colnam="onco")
+    #sites_mrcs, refSeq_oncogene, dists.only=TRUE, colnam="onco.100k")
+sites_mrcs$onco.100k <- abs(sites_mrcs$oncoDist) <= 50000
+sites_mrcs$oncoDist <- NULL
+# end oncogene
 
 sites_mrcs <- getPositionalValuesOfFeature(sites_mrcs, refSeq_genes)
 
