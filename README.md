@@ -25,6 +25,8 @@ hiAnnotator
 pipeUtils
 colorspace
 
+GCcontent: https://github.com/anatolydryga/GCcontent
+
 # pipeUtils requirement
 
 needs a column type which is hard-coded as "insertion" for integration site
