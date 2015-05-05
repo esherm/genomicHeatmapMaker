@@ -18,7 +18,7 @@ getDNaseI <- function(reference_genome) {
     makeGRanges(DNaseI, freeze=reference_genome, chromCol='chrom')
 }
 
-get_integration_sites_with_mrcs <- function(sampleName) {
+get_integration_sites_with_mrcs <- function(sampleName, refGenomeSeq) {
     sites <- getUniqueSites(sampleName)
     sites$type <- "insertion"
 
@@ -28,8 +28,26 @@ get_integration_sites_with_mrcs <- function(sampleName) {
     sites_mrcs <- rbind(sites, mrcs)
 
     sites_mrcs <- makeGRanges(sites_mrcs, soloStart=TRUE,
-        chromCol='chr', strandCol='strand', startCol='position') 
+        chromCol='chr', strandCol='strand', startCol='position')
+
+    #seqinfo needs to be exact here or trimming will be wrong
+    newSeqInfo <- seqinfo(refGenomeSeq)
+    seqInfo.new2old <- match(seqnames(newSeqInfo),
+                             seqnames(seqinfo(sites_mrcs)))
+    seqinfo(sites_mrcs, new2old=seqInfo.new2old) <- newSeqInfo
+
     sites_mrcs
+}
+
+#' return genome seq for human readable UCSC format
+#'
+#' format is: hg18, ...
+get_reference_genome <- function(reference_genome) {
+  pattern <- paste0("\\.", reference_genome, "$")
+  match_index <- which(grepl(pattern, installed.genomes()))
+  stopifnot(length(match_index) == 1)
+  BS_genome_full_name <- installed.genomes()[match_index]
+  get(BS_genome_full_name)
 }
 
 get_annotation_columns <- function(sites) {
