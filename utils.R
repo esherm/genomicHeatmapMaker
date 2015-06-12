@@ -18,7 +18,9 @@ getDNaseI <- function(reference_genome) {
   makeGRanges(DNaseI, freeze=reference_genome, chromCol='chrom')
 }
 
-get_integration_sites_with_mrcs <- function(sampleNames, refGenomeSeq) {
+get_integration_sites_with_mrcs <- function(
+    sampleNames, refGenomeSeq, connection
+) {
 
   sampleNames <- split(sampleNames, names(sampleNames))
 
@@ -26,11 +28,14 @@ get_integration_sites_with_mrcs <- function(sampleNames, refGenomeSeq) {
     samplesToGet <- sampleNames[[x]] #only for this scope
     alias <- names(sampleNames)[x]
 
-    sites <- getUniqueSites(samplesToGet)
+    sites <- getUniqueSites(samplesToGet, connection)
+    if (nrow(sites) == 0) {
+        return(NULL)
+    }
     sites$type <- "insertion"
     sites$sampleName <- alias
 
-    mrcs <- getMRCs(samplesToGet)
+    mrcs <- getMRCs(samplesToGet, conn=connection)
     mrcs$type <- "match"
     mrcs$sampleName <- alias
 
