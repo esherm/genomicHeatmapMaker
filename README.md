@@ -1,4 +1,4 @@
-# Database connfig file location
+# Database config file location
 
 config file should be in home directory and called .my.cnf,
 e.g. ~/.my.cnf
@@ -16,16 +16,17 @@ database=intsitesdev
 
 # Dependencies
 
-intSiteRetriever : https://github.com/esherm/intSiteRetriever 
-(at present get the project in current folder:
-```
-git clone https://github.com/esherm/intSiteRetriever
-```)
+intSiteRetriever see https://github.com/BushmanLab/intSiteRetriever.git
+for installation instructions.
+
 hiAnnotator
 pipeUtils
 colorspace
 
 GCcontent: https://github.com/anatolydryga/GCcontent
+CancerGeneList: https://github.com/BushmanLab/CancerGeneList.git
+
+last 2 dependenices should be cloned in genomicHeatmapMaker directory.
 
 # pipeUtils requirement
 
