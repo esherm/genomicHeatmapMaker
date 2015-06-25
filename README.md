@@ -14,6 +14,12 @@ port=3309
 database=intsitesdev
 ```
 
+# Script to run maker from sites from DB
+
+```
+Rscript map_from_db.R -r hg18 -o heatmap -g gtsp_label.tsv -c intSitesDev237
+```
+
 # Dependencies
 
 intSiteRetriever see https://github.com/BushmanLab/intSiteRetriever.git
