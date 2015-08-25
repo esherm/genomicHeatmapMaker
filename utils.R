@@ -18,42 +18,39 @@ getDNaseI <- function(reference_genome) {
   makeGRanges(DNaseI, freeze=reference_genome, chromCol='chrom')
 }
 
+add_label <- function(sites, sampleName_GTSP) {
+    sites_GTSP <- merge(sites, sampleName_GTSP)
+    sites_GTSP$sampleName <- sites_GTSP$label
+    sites_GTSP$refGenome <- NULL # not needed downstream
+    sites_GTSP$GTSP <- NULL # not needed downstream
+    sites_GTSP$label <- NULL
+    sites_GTSP
+}
+
 get_integration_sites_with_mrcs <- function(
-    sampleNames, refGenomeSeq, connection
+    sampleName_GTSP, refGenomeSeq, connection
 ) {
-
-  sampleNames <- split(sampleNames, names(sampleNames))
-
-  sites_mrcs <- lapply(seq(length(sampleNames)), function(x){
-    samplesToGet <- sampleNames[[x]] #only for this scope
-    alias <- names(sampleNames)[x]
-
-    sites <- getUniqueSites(samplesToGet, connection)
-    if (nrow(sites) == 0) {
-        return(NULL)
-    }
+    sites <- getUniqueSites(sampleName_GTSP, connection)
     sites$type <- "insertion"
-    sites$sampleName <- alias
-
-    mrcs <- getMRCs(samplesToGet, conn=connection)
+    sites <- add_label(sites, sampleName_GTSP)
+    
+    print("before getMRCs")
+    mrcs <- getMRCs(sampleName_GTSP, connection)
     mrcs$type <- "match"
-    mrcs$sampleName <- alias
+    mrcs <- add_label(mrcs, sampleName_GTSP)
 
-    rbind(sites, mrcs)
-  })
+    sites_mrcs <- rbind(sites, mrcs)
 
-  sites_mrcs <- do.call(rbind, sites_mrcs)
-  
-  sites_mrcs <- makeGRanges(sites_mrcs, soloStart=TRUE,
-                            chromCol='chr', strandCol='strand', startCol='position')
-  
-  #seqinfo needs to be exact here or trimming will be wrong
-  newSeqInfo <- seqinfo(refGenomeSeq)
-  seqInfo.new2old <- match(seqnames(newSeqInfo),
-                           seqnames(seqinfo(sites_mrcs)))
-  seqinfo(sites_mrcs, new2old=seqInfo.new2old) <- newSeqInfo
-  
-  sites_mrcs
+    sites_mrcs <- makeGRanges(sites_mrcs, soloStart=TRUE,
+        chromCol='chr', strandCol='strand', startCol='position')
+
+    #seqinfo needs to be exact here or trimming will be wrong
+    newSeqInfo <- seqinfo(refGenomeSeq)
+    seqInfo.new2old <- match(seqnames(newSeqInfo),
+        seqnames(seqinfo(sites_mrcs)))
+    seqinfo(sites_mrcs, new2old=seqInfo.new2old) <- newSeqInfo
+
+    sites_mrcs
 }
 
 #' return genome seq for human readable UCSC format

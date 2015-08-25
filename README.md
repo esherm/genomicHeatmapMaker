@@ -1,42 +1,55 @@
-# Database config file location
+# Genomic Heatmap Maker for Integration Sites
 
-config file should be in home directory and called .my.cnf,
-e.g. ~/.my.cnf
 
-The .my.cnf format is as follows:
+# Script to run genomic heatmap maker from sites from DB
+
+For list of GTSP and replicates generate heatmap
+for a given reference genome and given integration site database:
+```
+Rscript genomicHeatmapMaker.R sampleName_GTSP.csv -o heatmap --ref_genome hg18  -sites_group intSitesDev237
+```
+Group should be present in ~/.my.cnf.
+
+File `sampleName_GTSP.csv` should have at least 2 columns: sampleName and GTSP.
+If column `label` is given it will be used as a label in heatmap otherrwise GTSP will be used.
+All replicates of given GTSP merged together. See geneTherapyPatientReportMaker and intSiteCaller
+for instruction how to generate `sampleName_GTSP.csv`.
+
+Defaults: reference genome is "hg18" and sites group is "intsites_miseq".
+
+
+# Database configuration file 
+
+Configuration file should be in home directory and called .my.cnf,
+(~/.my.cnf).
+
+The .my.cnf format is:
 
 ```
-[intSitesDEV-dev]
+[group_name]
 user=YYYYYYY
 password=XXXXXX
-host=microb98.med.upenn.edu
-port=3309
-database=intsitesdev
-```
-
-# Script to run maker from sites from DB
-
-```
-Rscript map_from_db.R -r hg18 -o heatmap -g gtsp_label.tsv -c intSitesDev237
+host=microbZZZ.med.upenn.edu
+port=330X
+database=XXX
 ```
 
 # Dependencies
 
-intSiteRetriever see https://github.com/BushmanLab/intSiteRetriever.git
-for installation instructions.
-
+intSiteRetriever
 hiAnnotator
 pipeUtils
 colorspace
+GCcontent
 
-GCcontent: https://github.com/anatolydryga/GCcontent
-CancerGeneList: https://github.com/BushmanLab/CancerGeneList.git
+List of cancer genes are copied from:
+CancerGeneList
 
-last 2 dependenices should be cloned in genomicHeatmapMaker directory.
-
-# pipeUtils requirement
+# implementation details: pipeUtils requirement
 
 needs a column type which is hard-coded as "insertion" for integration site
 and "match" for match random contol(mrc).
+
+pipeUtils can only generate figures for 2 or more samples.
 
 

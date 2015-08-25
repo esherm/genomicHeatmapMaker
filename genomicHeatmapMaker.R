@@ -1,54 +1,43 @@
-source("GCcontent/GCcontent.R")
-source("CancerGeneList/onco_genes.R")
 source("utils.R")
 
 library(colorspace)
 library(hiAnnotator)
 library(pipeUtils)
 library(intSiteRetriever)
+library(GCcontent)
 library(BSgenome)
 library(BSgenome.Hsapiens.UCSC.hg18)
 library(BSgenome.Hsapiens.UCSC.hg19)
 
-make_heatmap <- function(sampleNameInput, labels, referenceGenome, output_dir, connection) {
-    #order should be preserved in final heatmap
-    names(sampleNameInput) <- labels
+make_heatmap <- function(sampleName_GTSP, referenceGenome, output_dir, connection) {
+    if ( ! "label" %in% colnames(sampleName_GTSP)) {
+        sampleName_GTSP$label <- sampleName_GTSP$GTSP
+    }
+    sampleName_GTSP <- select(sampleName_GTSP, sampleName, GTSP, label)
 
     # should have at least two samples
-    stopifnot(length(sampleNameInput) != 1)
+    stopifnot(length(unique(sampleName_GTSP$GTSP)) != 1)
 
-    #if no names are given, just duplicate the sampleNames
-    if(is.null(names(sampleNameInput))){
-      names(sampleNameInput) <- sampleNameInput
-    }
-
-    stopifnot(length(sampleNameInput) == length(unique(names(sampleNameInput))))
-
-    #dereplicating wildcards and changing 'originalNames' to represent the
-    #user-given alias
-    sampleNames_originalNames <- getSampleNamesLike(sampleNameInput, connection)
-    sampleNames_originalNames$originalNames <-
-      names(sampleNameInput)[match(sampleNames_originalNames$originalNames,
-                               sampleNameInput)]
-
-    sampleNames <- sampleNames_originalNames$sampleNames
-    names(sampleNames) <- sampleNames_originalNames$originalNames
+    sampleName_GTSP$refGenome <- rep(referenceGenome, nrow(sampleName_GTSP))
 
     # check that all samples processed with the same reference genome
-    stopifnot(unique(getRefGenome(sampleNames, connection)$refGenome) == referenceGenome)
-    stopifnot(all(setNameExists(sampleNames, connection)))
+    stopifnot(all(setNameExists(sampleName_GTSP, connection)))
 
     reference_genome_sequence <- get_reference_genome(referenceGenome)
     sites_mrcs <- get_integration_sites_with_mrcs(
-        sampleNames, reference_genome_sequence, connection)
+        sampleName_GTSP, reference_genome_sequence, connection)
 
     # TODO: populate from local database, at present pulled from UCSC web-site
     refSeq_genes <- getRefSeq_genes(referenceGenome)
     CpG_islands <- getCpG_islands(referenceGenome)
     DNaseI <- getDNaseI(referenceGenome)
 
-
-    oncogene_file <- "CancerGeneList/allonco_no_pipes.csv"
+    oncogene_file <- "allonco_no_pipes.csv"
+    # @return vector of gene symbols
+    get_oncogene_from_file <- function(filename) {
+        onco <- read.csv(filename, header=FALSE, stringsAsFactors=FALSE)
+        as.character(onco$V1)
+    }
     oncogenes <- get_oncogene_from_file(oncogene_file)
     # END annotation loading
 
@@ -57,6 +46,11 @@ make_heatmap <- function(sampleNameInput, labels, referenceGenome, output_dir, c
 
     # is there oncogene closer than 50k
     refSeq_gene_symbols <- refSeq_genes$name2
+    #' check if gene is onco gene list(curated by Bushman's lab)
+    #' @return TRUE if onco-gene FALSE if not
+    is_onco_gene <- function(gene_symbol_sites, oncogenes) {
+        toupper(gene_symbol_sites) %in% toupper(oncogenes)
+    }
     is_refSeq_oncogene <- is_onco_gene(refSeq_gene_symbols, oncogenes)
     refSeq_oncogene <- refSeq_genes[is_refSeq_oncogene]
     sites_mrcs <- getNearestFeature(
@@ -104,7 +98,7 @@ make_heatmap <- function(sampleNameInput, labels, referenceGenome, output_dir, c
 
     #restore ordering of values in sites_mrcs$sampleName column so that heatmap
     #order reflects sample input order
-    sites_mrcs$sampleName <- factor(sites_mrcs$sampleName, levels=names(sampleNameInput))
+    #sites_mrcs$sampleName <- factor(sites_mrcs$sampleName, levels=names(sampleNameInput))
 
     rset <- with(sites_mrcs, ROC.setup(
       rep(TRUE, nrow(sites_mrcs)), type, siteID, sampleName))
