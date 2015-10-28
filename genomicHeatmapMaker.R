@@ -7,7 +7,7 @@ library(intSiteRetriever)
 library(GCcontent)
 library(BSgenome)
 library(BSgenome.Hsapiens.UCSC.hg18)
-library(BSgenome.Hsapiens.UCSC.hg19)
+library(BSgenome.Mmusculus.UCSC.mm9)
 
 make_heatmap <- function(sampleName_GTSP, referenceGenome, output_dir, connection) {
     if ( ! "label" %in% colnames(sampleName_GTSP)) {
@@ -20,6 +20,11 @@ make_heatmap <- function(sampleName_GTSP, referenceGenome, output_dir, connectio
 
     sampleName_GTSP$refGenome <- rep(referenceGenome, nrow(sampleName_GTSP))
 
+    # samples should have sites
+    stopifnot(nrow(getUniqueSiteCounts(sampleName_GTSP, connection)) > 1)
+    # also we need at least several sites per sample/replicate
+    stopifnot(is_enough_sites(sampleName_GTSP, connection))
+
     # check that all samples processed with the same reference genome
     stopifnot(all(setNameExists(sampleName_GTSP, connection)))
 
@@ -30,9 +35,12 @@ make_heatmap <- function(sampleName_GTSP, referenceGenome, output_dir, connectio
     # TODO: populate from local database, at present pulled from UCSC web-site
     refSeq_genes <- getRefSeq_genes(referenceGenome)
     CpG_islands <- getCpG_islands(referenceGenome)
-    DNaseI <- getDNaseI(referenceGenome)
 
     oncogene_file <- "allonco_no_pipes.csv"
+    if (grepl("^mm", referenceGenome)) {
+        oncogene_file <- "allonco_no_pipes.mm.csv"
+    }
+
     # @return vector of gene symbols
     get_oncogene_from_file <- function(filename) {
         onco <- read.csv(filename, header=FALSE, stringsAsFactors=FALSE)
@@ -88,9 +96,12 @@ make_heatmap <- function(sampleName_GTSP, referenceGenome, output_dir, connectio
     sites_mrcs <- from_counts_to_density(sites_mrcs, 
                                          "CpG_density", window_size_CpG_density)
 
-    window_size_DNaseI <- c("1k"=1e3, "10k"=1e4, "100k"=1e5, "1M"=1e6)
-    sites_mrcs <- getFeatureCounts(sites_mrcs, DNaseI, "DNaseI_count", 
-                                   width=window_size_DNaseI)
+    if( ! grepl("^mm", referenceGenome)) { # mouse does not have DNaseI track
+        DNaseI <- getDNaseI(referenceGenome)
+        window_size_DNaseI <- c("1k"=1e3, "10k"=1e4, "100k"=1e5, "1M"=1e6)
+        sites_mrcs <- getFeatureCounts(sites_mrcs, DNaseI, "DNaseI_count", 
+                                       width=window_size_DNaseI)
+    }
 
     sites_mrcs <- as.data.frame(sites_mrcs)
 
