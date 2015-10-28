@@ -34,7 +34,6 @@ get_integration_sites_with_mrcs <- function(
     sites$type <- "insertion"
     sites <- add_label(sites, sampleName_GTSP)
     
-    print("before getMRCs")
     mrcs <- getMRCs(sampleName_GTSP, connection)
     mrcs$type <- "match"
     mrcs <- add_label(mrcs, sampleName_GTSP)
@@ -147,4 +146,19 @@ getPositionalValuesOfFeature <- function(sites, genomicData) {
   mcols(sites) <- meta
   
   sites 
+}
+
+#' ROC.stata does not work with too few sites
+is_enough_sites <- function(sampleName_GTSP, connection) {
+     MIN_NUMBER_OF_SITES <- 3
+     n_sites <- getUniqueSiteCounts(sampleName_GTSP, connection) 
+     n_sites$enough_sites <- n_sites$uniqueSites >= MIN_NUMBER_OF_SITES
+     if (all(n_sites$enough_sites)) {
+        return(TRUE) 
+     }
+     message("****************************************")
+     message("The following samples have too few sites to generate heatmap:")
+     print(filter(n_sites, enough_sites == FALSE)) 
+     message("****************************************")
+     FALSE 
 }
