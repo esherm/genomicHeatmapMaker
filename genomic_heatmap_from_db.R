@@ -11,16 +11,17 @@ parser$add_argument("-o", "--output_dir", type="character", default="heatmap_out
     help="output folder where genomic heat maps files will be saved")
 parser$add_argument("-r", "--ref_genome", type="character", default="hg18", 
     help="reference genome used for all samples")
-parser$add_argument("-s", "--sites_group", type="character", default="intsites_miseq", 
+parser$add_argument("-s", "--sites_group", type="character", default="intsites_miseq.read", 
     help="which group to use for connection")
 
 args <- parser$parse_args()
+args
 
 referenceGenome <- args$ref_genome
 heat_map_result_dir <- args$output_dir 
 
 csvfile <- args$sample_gtsp
-if( ! file.exists(csvfile) ) stop(csvfile, "not found")
+if( ! file.exists(csvfile) ) stop(csvfile, " not found")
 sampleName_GTSP <- read.csv(csvfile)
 stopifnot(all(c("sampleName", "GTSP") %in% colnames(sampleName_GTSP)))
 message("\nGenerating report from the following sets")
