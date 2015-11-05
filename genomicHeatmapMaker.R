@@ -32,6 +32,18 @@ make_heatmap <- function(sampleName_GTSP, referenceGenome, output_dir, connectio
     sites_mrcs <- get_integration_sites_with_mrcs(
         sampleName_GTSP, reference_genome_sequence, connection)
 
+    sites_to_heatmap(sites_mrcs, referenceGenome, output_dir)
+}
+
+
+#' generate heatmap
+#'
+#' @param sites_mrcs real sites and mrcs GRanges object with metacolumns: 
+#'      sitID, type, label
+#' @param referenceGenome reference genome name, e.g. "hg18"
+#' @param output_dir name of the directory
+sites_to_heatmap <- function(sites_mrcs, referenceGenome, output_dir) {
+    reference_genome_sequence <- get_reference_genome(referenceGenome)
     # TODO: populate from local database, at present pulled from UCSC web-site
     refSeq_genes <- getRefSeq_genes(referenceGenome)
     CpG_islands <- getCpG_islands(referenceGenome)
