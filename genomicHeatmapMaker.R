@@ -126,6 +126,6 @@ sites_to_heatmap <- function(sites_mrcs, referenceGenome, output_dir) {
     rset <- with(sites_mrcs, ROC.setup(
       rep(TRUE, nrow(sites_mrcs)), type, siteID, sampleName))
     roc.res <- ROC.strata(annotation_columns, rset, add.var=TRUE, sites_mrcs)
-    ROCSVG(roc.res, heat_map_result_dir)
+    ROCSVG(roc.res, output_dir)
 
 }
