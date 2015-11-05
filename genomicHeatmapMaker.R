@@ -1,5 +1,3 @@
-source("utils.R")
-
 library(colorspace)
 library(hiAnnotator)
 library(pipeUtils)

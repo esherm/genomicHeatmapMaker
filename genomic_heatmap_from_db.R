@@ -1,4 +1,5 @@
 source("genomicHeatmapMaker.R")
+source("utils.R")
 
 library(argparse, quietly=TRUE)
 library(DBI, quietly=TRUE)
