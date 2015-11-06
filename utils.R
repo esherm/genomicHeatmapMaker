@@ -18,6 +18,30 @@ getDNaseI <- function(reference_genome) {
   makeGRanges(DNaseI, freeze=reference_genome, chromCol='chrom')
 }
 
+#' for given samples pull sites from database and construct MRCs
+get_sites_controls_from_db <- function(sampleName_GTSP, referenceGenome, connection) {
+    if ( ! "label" %in% colnames(sampleName_GTSP)) {
+        sampleName_GTSP$label <- sampleName_GTSP$GTSP
+    }
+    sampleName_GTSP <- select(sampleName_GTSP, sampleName, GTSP, label)
+
+    # should have at least two samples
+    stopifnot(length(unique(sampleName_GTSP$GTSP)) != 1)
+
+    sampleName_GTSP$refGenome <- rep(referenceGenome, nrow(sampleName_GTSP))
+
+    # samples should have sites
+    stopifnot(nrow(getUniqueSiteCounts(sampleName_GTSP, connection)) > 1)
+    # also we need at least several sites per sample/replicate
+    stopifnot(is_enough_sites(sampleName_GTSP, connection))
+
+    # check that all samples processed with the same reference genome
+    stopifnot(all(setNameExists(sampleName_GTSP, connection)))
+
+    reference_genome_sequence <- get_reference_genome(referenceGenome)
+    get_integration_sites_with_mrcs(sampleName_GTSP, reference_genome_sequence, connection)
+}
+
 add_label <- function(sites, sampleName_GTSP) {
     sites_GTSP <- merge(sites, sampleName_GTSP)
     sites_GTSP$sampleName <- sites_GTSP$label
@@ -50,17 +74,6 @@ get_integration_sites_with_mrcs <- function(
     seqinfo(sites_mrcs, new2old=seqInfo.new2old) <- newSeqInfo
 
     sites_mrcs
-}
-
-#' return genome seq for human readable UCSC format
-#'
-#' format is: hg18, ...
-get_reference_genome <- function(reference_genome) {
-  pattern <- paste0("\\.", reference_genome, "$")
-  match_index <- which(grepl(pattern, installed.genomes()))
-  stopifnot(length(match_index) == 1)
-  BS_genome_full_name <- installed.genomes()[match_index]
-  get(BS_genome_full_name)
 }
 
 get_annotation_columns <- function(sites) {
@@ -161,4 +174,16 @@ is_enough_sites <- function(sampleName_GTSP, connection) {
      print(filter(n_sites, enough_sites == FALSE)) 
      message("****************************************")
      FALSE 
+}
+
+#' create a folder
+#'
+#' @param sites_mrcs Granges with sites, controls and features
+sites_to_ROC <- function(sites_mrcs, output_dir) {
+    sites_mrcs <- as.data.frame(sites_mrcs)
+    annotation_columns <- get_annotation_columns(sites_mrcs)
+    rset <- with(sites_mrcs, ROC.setup(
+      rep(TRUE, nrow(sites_mrcs)), type, siteID, sampleName))
+    roc.res <- ROC.strata(annotation_columns, rset, add.var=TRUE, sites_mrcs)
+    ROCSVG(roc.res, output_dir)
 }

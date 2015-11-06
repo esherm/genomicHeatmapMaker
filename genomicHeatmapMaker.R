@@ -8,28 +8,8 @@ library(BSgenome.Hsapiens.UCSC.hg18)
 library(BSgenome.Mmusculus.UCSC.mm9)
 
 make_heatmap <- function(sampleName_GTSP, referenceGenome, output_dir, connection) {
-    if ( ! "label" %in% colnames(sampleName_GTSP)) {
-        sampleName_GTSP$label <- sampleName_GTSP$GTSP
-    }
-    sampleName_GTSP <- select(sampleName_GTSP, sampleName, GTSP, label)
-
-    # should have at least two samples
-    stopifnot(length(unique(sampleName_GTSP$GTSP)) != 1)
-
-    sampleName_GTSP$refGenome <- rep(referenceGenome, nrow(sampleName_GTSP))
-
-    # samples should have sites
-    stopifnot(nrow(getUniqueSiteCounts(sampleName_GTSP, connection)) > 1)
-    # also we need at least several sites per sample/replicate
-    stopifnot(is_enough_sites(sampleName_GTSP, connection))
-
-    # check that all samples processed with the same reference genome
-    stopifnot(all(setNameExists(sampleName_GTSP, connection)))
-
-    reference_genome_sequence <- get_reference_genome(referenceGenome)
-    sites_mrcs <- get_integration_sites_with_mrcs(
-        sampleName_GTSP, reference_genome_sequence, connection)
-
+    sites_mrcs <- get_sites_controls_from_db(
+        sampleName_GTSP, referenceGenome, connection)
     sites_to_heatmap(sites_mrcs, referenceGenome, output_dir)
 }
 
@@ -112,18 +92,5 @@ sites_to_heatmap <- function(sites_mrcs, referenceGenome, output_dir) {
         sites_mrcs <- getFeatureCounts(sites_mrcs, DNaseI, "DNaseI_count", 
                                        width=window_size_DNaseI)
     }
-
-    sites_mrcs <- as.data.frame(sites_mrcs)
-
-    annotation_columns <- get_annotation_columns(sites_mrcs)
-
-    #restore ordering of values in sites_mrcs$sampleName column so that heatmap
-    #order reflects sample input order
-    #sites_mrcs$sampleName <- factor(sites_mrcs$sampleName, levels=names(sampleNameInput))
-
-    rset <- with(sites_mrcs, ROC.setup(
-      rep(TRUE, nrow(sites_mrcs)), type, siteID, sampleName))
-    roc.res <- ROC.strata(annotation_columns, rset, add.var=TRUE, sites_mrcs)
-    ROCSVG(roc.res, output_dir)
-
+    sites_to_ROC(sites_mrcs, output_dir)
 }
