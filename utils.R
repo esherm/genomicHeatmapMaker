@@ -36,7 +36,13 @@ get_sites_controls_from_db <- function(sampleName_GTSP, referenceGenome, connect
     stopifnot(is_enough_sites(sampleName_GTSP, connection))
 
     # check that all samples processed with the same reference genome
-    stopifnot(all(setNameExists(sampleName_GTSP, connection)))
+    is_in_db <- setNameExists(sampleName_GTSP, connection)
+    if ( ! all(is_in_db)) {
+        print("The following samples are NOT in the database")
+        print(sampleName_GTSP[ ! is_in_db, ])
+        stop()
+    }
+    #stopifnot(all(setNameExists(sampleName_GTSP, connection)))
 
     reference_genome_sequence <- get_reference_genome(referenceGenome)
     get_integration_sites_with_mrcs(sampleName_GTSP, reference_genome_sequence, connection)
