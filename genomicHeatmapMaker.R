@@ -39,8 +39,6 @@ sites_to_heatmap <- function(sites_mrcs, referenceGenome, output_dir) {
     oncogenes <- get_oncogene_from_file(oncogene_file)
     # END annotation loading
 
-    sites_mrcs <- getSitesInFeature(
-      sites_mrcs, refSeq_genes, "within_refSeq_gene", asBool=TRUE)
 
     # is there oncogene closer than 50k
     refSeq_gene_symbols <- refSeq_genes$name2
@@ -58,25 +56,27 @@ sites_to_heatmap <- function(sites_mrcs, referenceGenome, output_dir) {
     sites_mrcs$oncoDist <- NULL
     # end oncogene
 
+    # need within_refSeq_gene for getPositionalValuesOfFeature
+    sites_mrcs <- getSitesInFeature(
+      sites_mrcs, refSeq_genes, "within_refSeq_gene", asBool=TRUE)
+
     sites_mrcs <- getPositionalValuesOfFeature(sites_mrcs, refSeq_genes)
+   
+    # redo the work to move it after positional values 
+    mcols(sites_mrcs)$within_refSeq_gene <- NULL
+    sites_mrcs <- getSitesInFeature(
+      sites_mrcs, refSeq_genes, "within_refSeq_gene", asBool=TRUE)
 
     window_size_refSeq <- c("10k"=1e4, "100k"=1e5, "1M"=1e6)
     sites_mrcs <- getFeatureCounts(sites_mrcs, refSeq_genes, "refSeq_counts", 
                                    width=window_size_refSeq)
 
-    window_size_GC <- c("50"=50, "100"=100, "250"=250,
-                        "500"=500, "1k"=1000, "2k"=2000, "5k"=5000,
-                        "10k"=1e4, "25k"=2.5e4, "50k"=5e4, "100k"=1e5, 
-                        "250k"=2.5e5, "500k"=5e5, "1M"=1e6)
-    # temporary smaller one to save CPU time:
-    # for 50K sites and 150K mrcs takes about several minutes
-    window_size_GC <- c("50"=50, "100"=100, "250"=250,
-        "500"=500, "1k"=1000, "2k"=2000, "5k"=5000, 
-        "10k"=1e4, "25k"=2.5e4, "50k"=5e4)
+    window_size_GC <- c("100"=100, 
+        "1k"=1000, "10k"=1e4, "100k"=1e5, "1M"=1e6)
     sites_mrcs <- getGCpercentage(
       sites_mrcs, "GC", window_size_GC, reference_genome_sequence)
 
-    window_size_CpG_counts <- c("2k"=2e3, "10k"=1e4)
+    window_size_CpG_counts <- c("1k"=1e3, "10k"=1e4)
     sites_mrcs <- getFeatureCounts(sites_mrcs, CpG_islands, "CpG_counts", 
                                    width=window_size_CpG_counts)
 
