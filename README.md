@@ -12,9 +12,12 @@ Rscript genomic_heatmap_from_db.R sampleName_GTSP.csv -o heatmap --ref_genome hg
 Group should be present in ~/.my.cnf.
 
 File `sampleName_GTSP.csv` should have at least 2 columns: `sampleName` and
-`GTSP`. If column `label` is given it will be used as a label in heatmap,
-otherwise GTSP column will be used.  All samples with the same GTSP column merged
-together. See geneTherapyPatientReportMaker 'check_patient_gtsp.R' script for instruction how to generate `sampleName_GTSP.csv` for samples that are in speciment management db.
+`GTSP`. `sampleName` is the name used in integration sites db. If column
+`label` is given it will be used as a label in heatmap, otherwise GTSP column
+will be used.  All samples with the same GTSP column merged together. See
+geneTherapyPatientReportMaker 'check_patient_gtsp.R' script for instruction how
+to generate `sampleName_GTSP.csv` for samples that are in speciment management
+db.
 
 ## Database configuration file 
 
