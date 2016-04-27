@@ -2,7 +2,7 @@ source("genomicHeatmapMaker.R")
 source("utils.R")
 
 libs <- c("argparse", "DBI", "RMySQL", "dplyr")
-sapply(libs, library, character.only=TRUE)
+invisible(sapply(libs, library, character.only=TRUE))
 
 parser <- ArgumentParser(description="Make genomic heatmap for sites from database")
 parser$add_argument("sample_gtsp", nargs='?', default='sampleName_GTSP.csv')
@@ -18,6 +18,15 @@ args
 
 referenceGenome <- args$ref_genome
 heat_map_result_dir <- args$output_dir 
+
+loaded_ref_genomes <- c ("hg18", "mm9")
+if ( ! referenceGenome %in% loaded_ref_genomes) {
+    message("Only following genomes are loaded:")
+    message(paste(loaded_ref_genomes, collapse=" "))
+    message("Install and add new genomes to genomicHeatmapMaker.R")
+    message("and add it to loaded_ref_genomes vector in genomic_heatmap_from_db.R")
+    stop(0)
+}
 
 csvfile <- args$sample_gtsp
 if( ! file.exists(csvfile) ) stop(csvfile, " not found")

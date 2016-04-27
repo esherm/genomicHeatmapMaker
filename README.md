@@ -21,7 +21,7 @@ together. See geneTherapyPatientReportMaker 'check_patient_gtsp.R' script for in
 Configuration file should be in home directory and called .my.cnf,
 (~/.my.cnf).
 
-# Dependencies
+## Dependencies
 
 intSiteRetriever
 hiAnnotator
@@ -29,8 +29,11 @@ pipeUtils
 colorspace
 GCcontent
 
+At present genomes hg18 and mm9 genomes added, if other genomes are
+used add them to `genomicHeatmapMaker.R`.
 
-# Implementation details: pipeUtils requirement
+
+## Implementation details: pipeUtils requirement
 
 needs a column type which is hard-coded as "insertion" for integration site
 and "match" for match random contol(mrc).
