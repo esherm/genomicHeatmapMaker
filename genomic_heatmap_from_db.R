@@ -1,10 +1,8 @@
 source("genomicHeatmapMaker.R")
 source("utils.R")
 
-library(argparse, quietly=TRUE)
-library(DBI, quietly=TRUE)
-library(RMySQL, quietly=TRUE)
-library(dplyr)
+libs <- c("argparse", "DBI", "RMySQL", "dplyr")
+sapply(libs, library, character.only=TRUE)
 
 parser <- ArgumentParser(description="Make genomic heatmap for sites from database")
 parser$add_argument("sample_gtsp", nargs='?', default='sampleName_GTSP.csv')
