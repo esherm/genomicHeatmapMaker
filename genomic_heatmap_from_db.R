@@ -1,11 +1,12 @@
 source("genomicHeatmapMaker.R")
 source("utils.R")
 
-libs <- c("argparse", "DBI", "RMySQL", "dplyr")
+libs <- c("argparse", "DBI", "RMySQL", "dplyr", 'yaml', 'RSQLite')
 invisible(sapply(libs, library, character.only=TRUE))
 
 parser <- ArgumentParser(description="Make genomic heatmap for sites from database")
 parser$add_argument("sample_gtsp", nargs='?', default='sampleName_GTSP.csv')
+parser$add_argument("-c", default="./INSPIIRED.yml", help="path to INSPIIRED configuration file.")
 parser$add_argument("-o", "--output_dir", type="character", default="heatmap_output",
     help="output folder where genomic heat maps files will be saved")
 parser$add_argument("-r", "--ref_genome", type="character", default="hg18", 
@@ -15,6 +16,11 @@ parser$add_argument("-s", "--sites_group", type="character", default="intsites_m
 
 args <- parser$parse_args()
 args
+
+# Load configuration file
+if (!file.exists(args$c)) stop("the configuration file can not be found.")
+config <<- yaml.load_file(args$c)
+
 
 referenceGenome <- args$ref_genome
 heat_map_result_dir <- args$output_dir 
@@ -35,8 +41,26 @@ stopifnot(all(c("sampleName", "GTSP") %in% colnames(sampleName_GTSP)))
 message("\nGenerating report from the following sets")
 print(sampleName_GTSP)
 
-connection <- dbConnect(MySQL(), group=args$sites_group)
-info <- dbGetInfo(connection)
-connection <- src_sql("mysql", connection, info = info)
+### connection <- dbConnect(MySQL(), group=args$sites_group)
+### info <- dbGetInfo(connection)
+### connection <- src_sql("mysql", connection, info = info)
+
+if (config$UseMySQL){
+   stopifnot(file.exists("~/.my.cnf"))
+   stopifnot(file.info("~/.my.cnf")$mode == as.octmode("600"))
+   dbConn <- dbConnect(MySQL(), group=config$MySQLconnectionGroup)
+   info <- dbGetInfo(dbConn)
+   connection <- src_sql("mysql", dbConn, info = info)
+}else{
+   dbConn <- dbConnect(RSQLite::SQLite(), dbname=config$SQLiteIntSiteCallerDB)
+   info <- dbGetInfo(dbConn)
+   connection <- src_sql("sqlite", dbConn, info = info)
+   dbConn2 <- dbConnect(RSQLite::SQLite(), dbname=config$SQLiteSpecimenManagementDB)
+   info2 <- dbGetInfo(dbConn2)
+   connection2 <- src_sql("sqlite", dbConn2, info = info2)
+}
+
+
+
 
 make_heatmap(sampleName_GTSP, referenceGenome, heat_map_result_dir, connection)
