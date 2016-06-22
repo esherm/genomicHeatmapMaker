@@ -13,7 +13,6 @@ make_heatmap <- function(sampleName_GTSP, referenceGenome, output_dir, connectio
     sites_to_heatmap(sites_mrcs, referenceGenome, output_dir)
 }
 
-
 #' generate heatmap
 #'
 #' @param sites_mrcs real sites and mrcs GRanges object with metacolumns: 
