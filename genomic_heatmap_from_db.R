@@ -1,5 +1,10 @@
-source("genomicHeatmapMaker.R")
-source("utils.R")
+codeDir <- dirname(sub("--file=", "", grep("--file=", commandArgs(trailingOnly=FALSE), value=T)))
+
+### source("genomicHeatmapMaker.R")
+### source("utils.R")
+
+source(file.path(codeDir, "genomicHeatmapMaker.R"))
+source(file.path(codeDir, "utils.R"))
 
 libs <- c("argparse", "DBI", "RMySQL", "dplyr", 'yaml', 'RSQLite')
 invisible(sapply(libs, library, character.only=TRUE))
@@ -41,19 +46,20 @@ stopifnot(all(c("sampleName", "GTSP") %in% colnames(sampleName_GTSP)))
 message("\nGenerating report from the following sets")
 print(sampleName_GTSP)
 
-if (config$UseMySQL){
+# Connect to the database
+if (config$dataBase == 'mysql'){
    stopifnot(file.exists("~/.my.cnf"))
    stopifnot(file.info("~/.my.cnf")$mode == as.octmode("600"))
-   dbConn <- dbConnect(MySQL(), group=config$MySQLconnectionGroup)
+   dbConn <- dbConnect(MySQL(), group=config$mysqlConnectionGroup)
    info <- dbGetInfo(dbConn)
    connection <- src_sql("mysql", dbConn, info = info)
-}else{
-   dbConn <- dbConnect(RSQLite::SQLite(), dbname=config$SQLiteIntSiteCallerDB)
+}else if (config$dataBase == 'sqlite') {
+   dbConn <- dbConnect(RSQLite::SQLite(), dbname=config$sqliteIntSitesDB)
    info <- dbGetInfo(dbConn)
    connection <- src_sql("sqlite", dbConn, info = info)
-   dbConn2 <- dbConnect(RSQLite::SQLite(), dbname=config$SQLiteSpecimenManagementDB)
+   dbConn2 <- dbConnect(RSQLite::SQLite(), dbname=config$sqliteSampleManagement)
    info2 <- dbGetInfo(dbConn2)
    connection2 <- src_sql("sqlite", dbConn2, info = info2)
-}
+} else { stop('Can not establish a connection to the database') }
 
 make_heatmap(sampleName_GTSP, referenceGenome, heat_map_result_dir, connection)
