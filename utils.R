@@ -18,48 +18,68 @@ getDNaseI <- function(reference_genome) {
   makeGRanges(DNaseI, freeze=reference_genome, chromCol='chrom')
 }
 
-get_integration_sites_with_mrcs <- function(sampleNames, refGenomeSeq) {
+#' for given samples pull sites from database and construct MRCs
+get_sites_controls_from_db <- function(sampleName_GTSP, referenceGenome, connection) {
+    if ( ! "label" %in% colnames(sampleName_GTSP)) {
+        sampleName_GTSP$label <- sampleName_GTSP$GTSP
+    }
+    sampleName_GTSP <- select(sampleName_GTSP, sampleName, GTSP, label)
 
-  sampleNames <- split(sampleNames, names(sampleNames))
+    # should have at least two samples
+    stopifnot(length(unique(sampleName_GTSP$GTSP)) != 1)
 
-  sites_mrcs <- lapply(seq(length(sampleNames)), function(x){
-    samplesToGet <- sampleNames[[x]] #only for this scope
-    alias <- names(sampleNames)[x]
+    sampleName_GTSP$refGenome <- rep(referenceGenome, nrow(sampleName_GTSP))
 
-    sites <- getUniqueSites(samplesToGet)
-    sites$type <- "insertion"
-    sites$sampleName <- alias
+    # samples should have sites
+    stopifnot(nrow(getUniqueSiteCounts(sampleName_GTSP, connection)) > 1)
+    # also we need at least several sites per sample/replicate
+    stopifnot(is_enough_sites(sampleName_GTSP, connection))
 
-    mrcs <- getMRCs(samplesToGet)
-    mrcs$type <- "match"
-    mrcs$sampleName <- alias
+    # check that all samples processed with the same reference genome
+    is_in_db <- setNameExists(sampleName_GTSP, connection)
+    if ( ! all(is_in_db)) {
+        print("The following samples are NOT in the database")
+        print(sampleName_GTSP[ ! is_in_db, ])
+        stop()
+    }
+    #stopifnot(all(setNameExists(sampleName_GTSP, connection)))
 
-    rbind(sites, mrcs)
-  })
-
-  sites_mrcs <- do.call(rbind, sites_mrcs)
-  
-  sites_mrcs <- makeGRanges(sites_mrcs, soloStart=TRUE,
-                            chromCol='chr', strandCol='strand', startCol='position')
-  
-  #seqinfo needs to be exact here or trimming will be wrong
-  newSeqInfo <- seqinfo(refGenomeSeq)
-  seqInfo.new2old <- match(seqnames(newSeqInfo),
-                           seqnames(seqinfo(sites_mrcs)))
-  seqinfo(sites_mrcs, new2old=seqInfo.new2old) <- newSeqInfo
-  
-  sites_mrcs
+    reference_genome_sequence <- get_reference_genome(referenceGenome)
+    get_integration_sites_with_mrcs(sampleName_GTSP, reference_genome_sequence, connection)
 }
 
-#' return genome seq for human readable UCSC format
-#'
-#' format is: hg18, ...
-get_reference_genome <- function(reference_genome) {
-  pattern <- paste0("\\.", reference_genome, "$")
-  match_index <- which(grepl(pattern, installed.genomes()))
-  stopifnot(length(match_index) == 1)
-  BS_genome_full_name <- installed.genomes()[match_index]
-  get(BS_genome_full_name)
+add_label <- function(sites, sampleName_GTSP) {
+    sites_GTSP <- merge(sites, sampleName_GTSP)
+    sites_GTSP$sampleName <- sites_GTSP$label
+    sites_GTSP$refGenome <- NULL # not needed downstream
+    sites_GTSP$GTSP <- NULL # not needed downstream
+    sites_GTSP$label <- NULL
+    sites_GTSP
+}
+
+get_integration_sites_with_mrcs <- function(
+    sampleName_GTSP, refGenomeSeq, connection
+) {
+    sites <- getUniqueSites(sampleName_GTSP, connection)
+    sites$type <- "insertion"
+    sites <- add_label(sites, sampleName_GTSP)
+    
+    mrcs <- getMRCs(sampleName_GTSP, connection)
+    mrcs$type <- "match"
+    mrcs <- add_label(mrcs, sampleName_GTSP)
+
+    sites_mrcs <- rbind(sites, mrcs)
+
+    sites_mrcs <- makeGRanges(sites_mrcs, soloStart=TRUE,
+        chromCol='chr', strandCol='strand', startCol='position')
+
+    #seqinfo needs to be exact here or trimming will be wrong
+    newSeqInfo <- seqinfo(refGenomeSeq)
+    seqInfo.new2old <- match(seqnames(newSeqInfo),
+        seqnames(seqinfo(sites_mrcs)))
+    seqinfo(sites_mrcs, new2old=seqInfo.new2old) <- newSeqInfo
+
+    sites_mrcs
 }
 
 get_annotation_columns <- function(sites) {
@@ -145,4 +165,31 @@ getPositionalValuesOfFeature <- function(sites, genomicData) {
   mcols(sites) <- meta
   
   sites 
+}
+
+#' ROC.stata does not work with too few sites
+is_enough_sites <- function(sampleName_GTSP, connection) {
+     MIN_NUMBER_OF_SITES <- 3
+     n_sites <- getUniqueSiteCounts(sampleName_GTSP, connection) 
+     n_sites$enough_sites <- n_sites$uniqueSites >= MIN_NUMBER_OF_SITES
+     if (all(n_sites$enough_sites)) {
+        return(TRUE) 
+     }
+     message("****************************************")
+     message("The following samples have too few sites to generate heatmap:")
+     print(filter(n_sites, enough_sites == FALSE)) 
+     message("****************************************")
+     FALSE 
+}
+
+#' create a folder
+#'
+#' @param sites_mrcs Granges with sites, controls and features
+sites_to_ROC <- function(sites_mrcs, output_dir) {
+    sites_mrcs <- as.data.frame(sites_mrcs)
+    annotation_columns <- get_annotation_columns(sites_mrcs)
+    rset <- with(sites_mrcs, ROC.setup(
+      rep(TRUE, nrow(sites_mrcs)), type, siteID, sampleName))
+    roc.res <- ROC.strata(annotation_columns, rset, add.var=TRUE, sites_mrcs)
+    ROCSVG(roc.res, output_dir)
 }
